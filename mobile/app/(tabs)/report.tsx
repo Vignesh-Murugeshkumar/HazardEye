@@ -99,11 +99,22 @@ export default function ReportScreen() {
 
     try {
       const formData = new FormData();
-      formData.append('image', {
-        uri: image.uri,
-        name: image.fileName || 'hazard.jpg',
-        type: image.type || 'image/jpeg',
-      } as any);
+
+      // On web, fetch the image URI and convert to a real File/Blob.
+      // On native, use the React Native {uri, name, type} convention.
+      if (Platform.OS === 'web') {
+        const response = await fetch(image.uri);
+        const blob = await response.blob();
+        const fileName = image.fileName || 'hazard.jpg';
+        const file = new File([blob], fileName, { type: image.type || 'image/jpeg' });
+        formData.append('image', file);
+      } else {
+        formData.append('image', {
+          uri: image.uri,
+          name: image.fileName || 'hazard.jpg',
+          type: image.type || 'image/jpeg',
+        } as any);
+      }
       formData.append('latitude', location.latitude.toString());
       formData.append('longitude', location.longitude.toString());
       formData.append('road_classification', roadClass);

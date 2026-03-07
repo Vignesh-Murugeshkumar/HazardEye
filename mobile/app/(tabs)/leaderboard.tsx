@@ -20,14 +20,15 @@ interface LeaderboardEntry {
   user_id: string;
   name: string;
   points: number;
-  reports_count: number;
+  report_count: number;
   city?: string;
 }
 
 interface MyStats {
-  rank: number;
+  rank: number | null;
   total_points: number;
-  reports_count: number;
+  total_reports: number;
+  report_count: number;
   badges: string[];
 }
 
@@ -121,7 +122,7 @@ export default function LeaderboardScreen() {
             {item.name} {isMe ? '(You)' : ''}
           </Text>
           <Text style={styles.entryMeta}>
-            {item.reports_count} reports • {item.city || 'India'}
+            {item.report_count} reports • {item.city || 'India'}
           </Text>
         </View>
         <Text style={[styles.entryPoints, isMe && styles.entryTextMe]}>
@@ -170,7 +171,7 @@ export default function LeaderboardScreen() {
                     <Ionicons name="person-circle" size={36} color={Colors.primary} />
                     <View style={{ marginLeft: 12, flex: 1 }}>
                       <Text style={styles.myStatsName}>{user?.name}</Text>
-                      <Text style={styles.myStatsRank}>Rank #{myStats.rank}</Text>
+                      <Text style={styles.myStatsRank}>Rank #{myStats.rank || '-'}</Text>
                     </View>
                     <View style={styles.myStatsPoints}>
                       <Text style={styles.myStatsPointsNum}>{myStats.total_points}</Text>

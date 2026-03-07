@@ -75,6 +75,7 @@ from app.routes.hotspots import router as hotspots_router
 from app.routes.constituencies import router as constituencies_router
 from app.routes.leaderboard import router as leaderboard_router
 from app.routes.weather import router as weather_router
+from app.routes.dashboard import router as dashboard_router
 
 app.include_router(auth_router)
 app.include_router(reports_router)
@@ -83,6 +84,7 @@ app.include_router(hotspots_router)
 app.include_router(constituencies_router)
 app.include_router(leaderboard_router)
 app.include_router(weather_router)
+app.include_router(dashboard_router)
 
 
 # ============================================

@@ -51,7 +51,20 @@ export default function AccountabilityScreen() {
       if (cityFilter !== 'All') params.city = cityFilter;
 
       const response = await constituenciesAPI.list(params);
-      setConstituencies(response.data || []);
+      const raw = response.data.constituencies || response.data || [];
+      // Flatten the nested {constituency: {...}, total_reports, ...} shape
+      const flattened = raw.map((item: any) => ({
+        id: item.constituency?.id || item.id,
+        name: item.constituency?.name || item.name,
+        type: item.constituency?.type || item.type,
+        city: item.constituency?.city || item.city,
+        representative_name: item.constituency?.representative_name || item.representative_name,
+        total_reports: item.total_reports || 0,
+        unresolved_reports: item.unresolved_count ?? item.unresolved_reports ?? 0,
+        avg_resolution_days: item.avg_resolution_days,
+        avg_severity: item.avg_severity,
+      }));
+      setConstituencies(flattened);
     } catch (err) {
       console.error('Failed to fetch constituencies:', err);
     } finally {

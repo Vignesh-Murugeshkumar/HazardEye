@@ -39,11 +39,19 @@ export const Colors = {
   resolved_unverified: '#6C757D',
 };
 
-export const API_BASE_URL = __DEV__
-  ? 'http://192.168.1.100:8000'  // Change to your local IP
-  : 'https://api.hazardeye.app';
+import { Platform } from 'react-native';
 
-export const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY';
+// Auto-detect API URL: web uses localhost, mobile uses LAN IP
+const getApiBaseUrl = () => {
+  if (!__DEV__) return 'https://api.hazardeye.app';
+  // On web, localhost works. On mobile (Expo Go), use your machine's LAN IP.
+  if (Platform.OS === 'web') return 'http://localhost:8000';
+  return 'http://192.168.1.8:8000'; // Your LAN IP
+};
+
+export const API_BASE_URL = getApiBaseUrl();
+
+export const GOOGLE_MAPS_API_KEY = 'AIzaSyBQCYbPHRMO8wdWjBucSZtwMj3XmfX1oVo';
 
 export const HAZARD_LABELS: Record<string, string> = {
   pothole: 'Pothole',

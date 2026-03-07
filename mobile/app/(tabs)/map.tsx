@@ -88,7 +88,7 @@ export default function MapScreen() {
 
   async function initMap() {
     const loc = await getCurrentLocation();
-    if (loc && mapRef.current) {
+    if (loc && mapRef.current?.animateToRegion) {
       mapRef.current.animateToRegion({
         latitude: loc.latitude,
         longitude: loc.longitude,
@@ -156,7 +156,7 @@ export default function MapScreen() {
   }
 
   function centerOnUser() {
-    if (location && mapRef.current) {
+    if (location && mapRef.current?.animateToRegion) {
       mapRef.current.animateToRegion({
         latitude: location.latitude,
         longitude: location.longitude,

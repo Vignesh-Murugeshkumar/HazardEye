@@ -13,8 +13,8 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
-import { reportsAPI } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { reportsAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import {
   Colors,
   HAZARD_LABELS,
@@ -24,7 +24,7 @@ import {
   SEVERITY_LABEL,
   SEVERITY_COLOR,
   API_BASE_URL,
-} from '../constants';
+} from '../../constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

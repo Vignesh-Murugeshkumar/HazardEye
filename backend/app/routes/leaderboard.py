@@ -138,25 +138,42 @@ async def get_my_stats(
     events_result = await db.execute(events_query, {"user_id": current_user.id})
     events = {row[0]: {"points": int(row[1]), "count": int(row[2])} for row in events_result.fetchall()}
 
-    # Determine badges
+    # Determine user rank among all citizens
+    rank_query = text("""
+        SELECT rank_num FROM (
+            SELECT
+                u.id,
+                ROW_NUMBER() OVER (ORDER BY u.points DESC) AS rank_num
+            FROM users u
+            WHERE u.role = 'citizen'
+        ) sub
+        WHERE sub.id = :user_id
+    """)
+    rank_result = await db.execute(rank_query, {"user_id": current_user.id})
+    rank_row = rank_result.fetchone()
+    user_rank = int(rank_row[0]) if rank_row else None
+
+    # Determine badges (return string keys for frontend compatibility)
     badges = []
     total_reports = report_count.scalar() or 0
     total_points = current_user.points if isinstance(current_user.points, int) else (await db.execute(select(User.points).where(User.id == current_user.id))).scalar() or 0
     total_points = int(total_points) if total_points is not None else 0
     if total_reports >= 10:
-        badges.append({"name": "Hazard Hunter", "emoji": "🔍", "description": "Submitted 10+ reports"})
+        badges.append("hazard_hunter")
     if total_reports >= 50:
-        badges.append({"name": "Road Guardian", "emoji": "🛡️", "description": "Submitted 50+ reports"})
+        badges.append("road_guardian")
     if events.get("verification_cast", {}).get("count", 0) >= 20:
-        badges.append({"name": "Verification Hero", "emoji": "✅", "description": "Cast 20+ verification votes"})
+        badges.append("verification_hero")
     if total_points >= 500:
-        badges.append({"name": "Top Reporter", "emoji": "⭐", "description": "500+ total points"})
+        badges.append("top_reporter")
 
     return {
         "user_id": str(current_user.id),
         "name": current_user.name,
-        "total_points": current_user.points,
+        "total_points": total_points,
         "total_reports": total_reports,
+        "report_count": total_reports,
+        "rank": user_rank,
         "event_breakdown": events,
         "badges": badges,
     }

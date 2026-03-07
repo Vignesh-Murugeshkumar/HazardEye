@@ -112,7 +112,7 @@ export default function ProfileScreen() {
           <Text style={styles.statLabel}>Points</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{stats?.reports_count || 0}</Text>
+          <Text style={styles.statNumber}>{stats?.total_reports || 0}</Text>
           <Text style={styles.statLabel}>Reports</Text>
         </View>
         <View style={styles.statBox}>

@@ -25,7 +25,16 @@ async def list_constituencies(
     db: AsyncSession = Depends(get_db),
 ):
     """List all constituencies with summary statistics, sorted by accountability metrics."""
-    query = text("""
+
+    # Build ORDER BY safely — cannot parameterize ORDER BY in SQL
+    order_clauses = {
+        "unresolved": "COUNT(r.id) FILTER (WHERE r.status NOT IN ('resolved')) DESC NULLS LAST",
+        "resolution_time": "AVG(EXTRACT(EPOCH FROM (r.resolved_at - r.created_at))) DESC NULLS LAST",
+        "name": "c.name ASC",
+    }
+    order_by = order_clauses.get(sort_by, order_clauses["unresolved"])
+
+    query = text(f"""
         SELECT
             c.id,
             c.name,
@@ -42,15 +51,12 @@ async def list_constituencies(
             COALESCE(SUM(r.estimated_repair_cost) FILTER (WHERE r.status NOT IN ('resolved')), 0) AS total_cost
         FROM constituencies c
         LEFT JOIN reports r ON r.constituency_id = c.id
-        WHERE (:city IS NULL OR c.city = :city)
+        WHERE (CAST(:city AS TEXT) IS NULL OR c.city = :city)
         GROUP BY c.id, c.name, c.type, c.representative_name, c.city, c.created_at
-        ORDER BY
-            CASE WHEN :sort_by = 'unresolved' THEN COUNT(r.id) FILTER (WHERE r.status NOT IN ('resolved')) END DESC NULLS LAST,
-            CASE WHEN :sort_by = 'resolution_time' THEN AVG(EXTRACT(EPOCH FROM (r.resolved_at - r.created_at))) END DESC NULLS LAST,
-            CASE WHEN :sort_by = 'name' THEN c.name END ASC
+        ORDER BY {order_by}
     """)
 
-    result = await db.execute(query, {"city": city, "sort_by": sort_by})
+    result = await db.execute(query, {"city": city})
     rows = result.fetchall()
 
     constituencies = []

@@ -47,6 +47,10 @@ api.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Let the browser/RN set the correct Content-Type (with boundary) for FormData
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -119,8 +123,9 @@ export const authAPI = {
 export const reportsAPI = {
   create: (formData: FormData) =>
     api.post('/api/reports', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000,
+      // Do NOT set Content-Type manually — axios/browser will auto-set it
+      // with the correct multipart boundary.
     }),
 
   list: (params: {
@@ -186,6 +191,14 @@ export const leaderboardAPI = {
     api.get('/api/leaderboard', { params }),
 
   getMyStats: () => api.get('/api/leaderboard/me'),
+};
+
+// ============================================
+// DASHBOARD API
+// ============================================
+
+export const dashboardAPI = {
+  getStats: () => api.get('/api/dashboard/stats'),
 };
 
 // ============================================
