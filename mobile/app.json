@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "HazardEye",
+    "slug": "hazardeye",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "hazardeye",
+    "splash": {
+      "backgroundColor": "#FF6B35",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.hazardeye.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "HazardEye needs camera access to photograph road hazards.",
+        "NSLocationWhenInUseUsageDescription": "HazardEye needs your location to tag hazard reports with GPS coordinates.",
+        "NSLocationAlwaysUsageDescription": "HazardEye uses your location to find nearby hazard reports."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FF6B35"
+      },
+      "package": "com.hazardeye.app",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-camera",
+      "expo-location",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#FF6B35"
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: hazardeye-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hazardeye}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hazardeye_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-hazardeye}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hazardeye"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hazardeye-api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hazardeye:hazardeye_pass@postgres:5432/hazardeye
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./ml/models:/app/ml/models
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  pgdata:
+  uploads:
