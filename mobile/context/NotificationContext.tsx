@@ -1,39 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { Platform } from 'react-native';
+import { isRunningInExpoGo } from 'expo';
 import { authAPI } from '../services/api';
 import { useAuth } from './AuthContext';
 import Constants from 'expo-constants';
-
-// Lazy-import notifications to avoid crash in Expo Go SDK 54+
-let Notifications: typeof import('expo-notifications') | null = null;
-let Device: typeof import('expo-device') | null = null;
-
-// Only load notification modules on native (they crash Expo Go on SDK 53+)
-if (Platform.OS !== 'web') {
-  try {
-    Notifications = require('expo-notifications');
-    Device = require('expo-device');
-  } catch {
-    console.warn('expo-notifications not available');
-  }
-}
-
-// Set handler only if module loaded successfully
-if (Notifications) {
-  try {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
-    });
-  } catch {
-    // Silently ignore — Expo Go SDK 53+ doesn't support this
-  }
-}
 
 interface NotificationContextType {
   expoPushToken: string | null;
@@ -45,6 +15,12 @@ const NotificationContext = createContext<NotificationContextType>({
   notification: null,
 });
 
+// Detect Expo Go — push notifications were removed from Expo Go in SDK 53+
+const canUseNotifications =
+  Platform.OS !== 'web' &&
+  Constants.executionEnvironment !== 'storeClient' &&
+  !isRunningInExpoGo();
+
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<any | null>(null);
@@ -53,28 +29,41 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (!Notifications) return;
+    if (!canUseNotifications) return;
 
-    registerForPushNotifications().then((token) => {
-      if (token) setExpoPushToken(token);
+    // Dynamically import notification helpers only in dev builds
+    let cancelled = false;
+    import('./notifications.native').then((mod) => {
+      if (cancelled) return;
+
+      mod.setupNotificationHandler();
+
+      mod.registerForPushNotifications()
+        .then((token) => { if (token && !cancelled) setExpoPushToken(token); })
+        .catch(() => {});
+
+      try {
+        notificationListener.current =
+          mod.Notifications.addNotificationReceivedListener((notif) => {
+            setNotification(notif);
+          });
+
+        responseListener.current =
+          mod.Notifications.addNotificationResponseReceivedListener((response) => {
+            const data = response.notification.request.content.data;
+            if (data?.reportId) {
+              // Navigation handled by expo-router deep links
+            }
+          });
+      } catch {
+        // Notification listeners not available
+      }
+    }).catch(() => {
+      // expo-notifications not available (expected in Expo Go)
     });
 
-    try {
-      notificationListener.current = Notifications.addNotificationReceivedListener((notif) => {
-        setNotification(notif);
-      });
-
-      responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-        const data = response.notification.request.content.data;
-        if (data?.reportId) {
-          // Navigation handled by expo-router deep links
-        }
-      });
-    } catch {
-      // Push listeners not supported in Expo Go SDK 53+
-    }
-
     return () => {
+      cancelled = true;
       if (notificationListener.current) {
         try { notificationListener.current.remove(); } catch {}
       }
@@ -95,50 +84,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       {children}
     </NotificationContext.Provider>
   );
-}
-
-async function registerForPushNotifications(): Promise<string | null> {
-  if (Platform.OS === 'web' || !Notifications || !Device) {
-    return null;
-  }
-
-  if (!Device.isDevice) {
-    console.log('Push notifications require a physical device');
-    return null;
-  }
-
-  try {
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF6B35',
-      });
-    }
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      return null;
-    }
-
-    // Pass projectId explicitly to avoid manifest lookup errors
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-    const tokenData = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined as any
-    );
-    return tokenData.data;
-  } catch (e) {
-    console.warn('Push notification registration failed (expected in Expo Go):', e);
-    return null;
-  }
 }
 
 export function useNotifications() {
